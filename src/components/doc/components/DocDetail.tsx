@@ -18,6 +18,7 @@ import { DocData, fetchDocDataById, fetchMenuList } from '../util/docUtil';
 import DocToc from './DocToc';
 import MermaidBlock from './MermaidBlock';
 import Source from './Source';
+import React from 'react';
 
 interface DocDetailProps {
   selectedDocId: string;
@@ -234,6 +235,7 @@ function DocDetail(props: PropsWithChildren<DocDetailProps>) {
   useEffect(() => {
     if (!!props.selectedDocId) {
       fetchDocDataById(props.selectedDocId).then((res) => {
+        console.log(res);
         setDocData(res);
       });
     }
@@ -255,76 +257,96 @@ function DocDetail(props: PropsWithChildren<DocDetailProps>) {
           <FormattedMessage id='app.content.modifiedTime' />
           {moment(docData.gmtModified).format('YYYY-MM-DD HH:mm:SS')}
         </StyledModifiedTime>
-        <ReactMarkdown
-          remarkPlugins={[playgroundPlugin, linkPlugin, remarkGfm, remarkFrontmatter]}
-          // temporarily remove <a /> in toc
-          // rehypePlugins={[rehypeSlug, rehypeAutolinkHeadings, toc]}
-          rehypePlugins={[toc, customeToc, rehypeRaw]}
-          skipHtml={false}
-          components={{
-            a(param) {
-              const linkHref = param.href;
-              if (linkHref?.length == 0 && !param.children) {
-                return <span></span>;
-              }
-              const title = param.children[0];
-
-              // for links within the SPA: need to use <Link /> to properly handle routing.
-              if (typeof linkHref === 'string' && linkHref.startsWith('/#/docs/')) {
-                return (
-                  <Link
-                    to={`/docs/${version}/${lang === 'en' ? 'en' : 'cn'}/${linkHref.replace('/#/docs/', '')}`}
-                  >
-                    {title}
-                  </Link>
-                );
-              } else if (typeof linkHref === 'string' && linkHref.startsWith('/#/examples/')) {
-                return <Link to={linkHref.replace('/#/examples/', `/examples/${version}/`)}>{title}</Link>;
-              } else if (typeof linkHref === 'string' && linkHref.startsWith('/#/api/')) {
-                return <Link to={linkHref.replace('/#/api/', `/api/${version}/`)}>{title}</Link>;
-              }
-              // for links to other websites: use <a />
-              return (
-                <a href={linkHref as string} target='_blank'>
-                  {title}
-                </a>
-              );
-            },
-            //@ts-ignore
-            nav: DocToc,
-            blockquote({ className, src, children }: any) {
-              if (className === 'playground-in-doc') {
-                return <Playground id={getIdByTitle(src) || ''} title={docTitle} embed={true} />;
-              }
-
-              return <blockquote className={className}>{children}</blockquote>;
-            },
-            code({ node, inline, className, children, ...props }) {
-              const match = /language-(\w+)/.exec(className || '');
-              if (!inline && match) {
-                if (className?.indexOf('mermaid') !== -1) {
-                  const themePrefix = `%%{init: {'theme':'${theme === "dark-theme" ? "dark" : "default" }'}}%% `;
-
-                  return <MermaidBlock>{themePrefix + children[0]}</MermaidBlock>;
+        <div id="markdown-container">
+          <ReactMarkdown
+            remarkPlugins={[playgroundPlugin, linkPlugin, remarkGfm, remarkFrontmatter]}
+            // temporarily remove <a /> in toc
+            // rehypePlugins={[rehypeSlug, rehypeAutolinkHeadings, toc]}
+            rehypePlugins={[toc, customeToc, rehypeRaw]}
+            skipHtml={false}
+            components={{
+              a(param) {
+                const linkHref = param.href;
+                if (linkHref?.length == 0 && !param.children) {
+                  return <span></span>;
                 }
-                return <code dangerouslySetInnerHTML={{
-                  __html: Prism.highlight(children[0] as string || '', Prism.languages.javascript, 'javascript'),
-                }}
-                />
-              }
-              return (
-                <code className={className} {...props}>
-                  {children}
-                </code>
-              );
-            },
-          }}
-        >
-          {docData.content}
-        </ReactMarkdown>
+                const title = param.children[0];
+
+                // for links within the SPA: need to use <Link /> to properly handle routing.
+                if (typeof linkHref === 'string' && linkHref.startsWith('/#/docs/')) {
+                  return (
+                    <Link
+                      to={`/docs/${version}/${lang === 'en' ? 'en' : 'cn'}/${linkHref.replace('/#/docs/', '')}`}
+                    >
+                      {title}
+                    </Link>
+                  );
+                } else if (typeof linkHref === 'string' && linkHref.startsWith('/#/examples/')) {
+                  return <Link to={linkHref.replace('/#/examples/', `/examples/${version}/`)}>{title}</Link>;
+                } else if (typeof linkHref === 'string' && linkHref.startsWith('/#/api/')) {
+                  return <Link to={linkHref.replace('/#/api/', `/api/${version}/`)}>{title}</Link>;
+                }
+                // for links to other websites: use <a />
+                return (
+                  <a href={linkHref as string} target='_blank'>
+                    {title}
+                  </a>
+                );
+              },
+              //@ts-ignore
+              nav: DocToc,
+              blockquote({ className, src, children }: any) {
+                if (className === 'playground-in-doc') {
+                  return <Playground id={getIdByTitle(src) || ''} title={docTitle} embed={true} />;
+                }
+
+                return <blockquote className={className}>{children}</blockquote>;
+              },
+              code({ node, inline, className, children, ...props }) {
+                const match = /language-(\w+)/.exec(className || '');
+                if (!inline && match) {
+                  if (className?.indexOf('mermaid') !== -1) {
+                    const themePrefix = `%%{init: {'theme':'${theme === "dark-theme" ? "dark" : "default" }'}}%% `;
+
+                    return <MermaidBlock>{themePrefix + children[0]}</MermaidBlock>;
+                  }
+                  return <code dangerouslySetInnerHTML={{
+                    __html: Prism.highlight(children[0] as string || '', Prism.languages.javascript, 'javascript'),
+                  }}
+                  />
+                }
+                return (
+                  <code className={className} {...props}>
+                    {children}
+                  </code>
+                );
+              },
+            }}
+          >
+            {docData.content}
+          </ReactMarkdown>
+        </div>
       </StyledReactMarkdown>
     </StyledMarkdown>
   );
 }
 
 export default DocDetail;
+
+const flatten = (text: string, child: any): any => {
+  return typeof child === 'string'
+    ? text + child
+    : React.Children.toArray(child.props.children).reduce(flatten, text);
+};
+
+/**
+ * HeadingRenderer is a custom renderer
+ * It parses the heading and attaches an id to it to be used as an anchor
+ */
+const HeadingRenderer = (props: any) => {
+  const children = React.Children.toArray(props.children);
+  const text = children.reduce(flatten, '');
+  const slug = text.toLowerCase().replace(/\W/g, '-');
+  return React.createElement('h' + props.level, { id: slug }, props.children);
+};
+

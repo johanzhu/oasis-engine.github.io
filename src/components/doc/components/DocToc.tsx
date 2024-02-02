@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { toHtml } from 'hast-util-to-html';
 import { styled } from "@galacean/editor-ui";
 
@@ -27,11 +27,38 @@ const StyledToc = styled("div", {
 });
 
 const DocToc: React.FC = (props: any) => {
+
+  useEffect(() => {
+    const navItems = document.querySelectorAll('#markdown-nav-container p');
+
+    navItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const targetContent = item.textContent;
+        const headings = document.querySelectorAll('#markdown-container h1, #markdown-container h2, #markdown-container h3, #markdown-container h4, #markdown-container h5');
+
+        for (const heading of headings) {
+          if (heading.textContent === targetContent) {
+            const headingTop = heading.getBoundingClientRect().top + window.pageYOffset;
+            const offset = 60;
+            const scrollToPosition = headingTop - offset;
+            window.scrollTo({
+              top: scrollToPosition,
+              behavior: 'smooth'
+            });
+            break;
+          }
+        }
+      });
+    });
+  }, [props.node]);
+
   return (
-    <StyledToc dangerouslySetInnerHTML={{
-      __html: toHtml(props.node),
-    }}>
-    </StyledToc>
+    <div id="markdown-nav-container">
+      <StyledToc dangerouslySetInnerHTML={{
+        __html: toHtml(props.node),
+      }}>
+      </StyledToc>
+    </div>
   );
 };
 export default DocToc;
